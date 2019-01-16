@@ -4,7 +4,7 @@ Use this if you need to run heavy CPU bound work. Running such work on the main 
 load balancing functions while threads do the heavy CPU bound work.
 
 ```ts
-import {Pool} from 'thread-queue';
+import {Pool} from 'thread-pool';
 
 const pool = new Pool({
   size: 5,
@@ -16,7 +16,7 @@ const pool = new Pool({
 // fibonacci service. GET localhost:8080/fib/32
 app.get('/fib/:n', wrap(async (req, res) => {
   const n = req.params.n;
-  const result = await pool.run('fib', n);
+  const result = await pool.run('fib', n);  // calls fib(n) on a worker thread.
   res.end(`worker responded with fib(${n}) = ${result.result}. Timings: ${util.inspect(result.timings)}`);
 }));
 
