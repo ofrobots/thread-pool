@@ -1,6 +1,5 @@
-import {Worker} from 'worker_threads';
 import * as path from 'path';
-import { worker } from 'cluster';
+import {Worker} from 'worker_threads';
 
 type Microseconds = number;
 
@@ -21,6 +20,7 @@ export interface PoolOptions {
 
 export interface WorkerMessage {
   functionName: string;
+  // tslint:disable-next-line:no-any
   args: any[];
 }
 
@@ -29,18 +29,19 @@ interface Work {
   id?: number;
   resolve: Function;
   reject: Function;
-  queueTime: Microseconds
+  queueTime: Microseconds;
 }
 
-interface Result {
+export interface Result {
   // The result produced by the invoked function on the worker.
+  // tslint:disable-next-line:no-any
   result: any;
   timings: {
     // Amount of time waiting for a worker to be available.
     queue: Microseconds;
     // Amount of time spent running the work on the worker.
     run: Microseconds;
-  }
+  };
 }
 
 export class ThreadQueue {
@@ -56,18 +57,15 @@ export class ThreadQueue {
 
     this.filename = opts.filename;
     this.size = opts.size || 1;
-    
+
     this.workers = [];
     this.available = [];
     this.workQueue = [];
 
     for (let i = 0; i < this.size; ++i) {
       const worker = new Worker(path.join(__dirname, 'worker.js'), {
-        workerData: {
-          workerName: i,
-          filename: this.filename
-        }
-      }) as WorkerWithName;
+                       workerData: {workerName: i, filename: this.filename}
+                     }) as WorkerWithName;
 
       worker.name = i;
       this.workers.push(worker);
@@ -75,8 +73,8 @@ export class ThreadQueue {
     }
   }
 
-  // TODO: maybe queue is a better name for this.
-  queue(functionName: string, ...args: any[]) {
+  // tslint:disable-next-line:no-any
+  run(functionName: string, ...args: any[]): Promise<Result> {
     const queueTime = now();
 
     return new Promise((resolve, reject) => {
@@ -87,7 +85,7 @@ export class ThreadQueue {
         },
         resolve,
         reject,
-        queueTime: queueTime,
+        queueTime,
       };
       // TODO: create an async hooks AsyncResource for the work.
       this.workQueue.push(work);
@@ -117,17 +115,19 @@ export class ThreadQueue {
       this.available.push(worker);
       // TODO: perhaps queueMicrotask is better for this. We don't want IO to
       // starve the queue.
-      setImmediate(() => { this.turn(); });
+      setImmediate(() => {
+        this.turn();
+      });
 
       const timings = {
         queue: dequeTime - work.queueTime,
         run: doneTime - dequeTime
       };
 
-      work.resolve({
-        result: message,
-        timings
-      })
+      // TODO: if message instanceof Error, reject instead.
+      work.resolve({result: message, timings});
     });
   }
+
+  // TODO: implement drain() that terminates workers.
 }
