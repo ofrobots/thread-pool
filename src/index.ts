@@ -44,7 +44,7 @@ export interface Result {
   };
 }
 
-export class ThreadQueue {
+export class Pool {
   private filename: string;
   private size: number;
 
